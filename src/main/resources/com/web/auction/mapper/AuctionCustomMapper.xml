@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.web.auction.mapper.AuctionCustomMapper">
+
+    <resultMap id="auctionAndRecordMap" type="com.web.auction.pojo.Auction">
+        <id column="auctionId" property="auctionid" jdbcType="INTEGER"/>
+        <result column="auctionName" property="auctionname" jdbcType="VARCHAR"/>
+        <result column="auctionStartPrice" property="auctionstartprice" jdbcType="DECIMAL"/>
+        <result column="auctionUpset" property="auctionupset" jdbcType="DECIMAL"/>
+        <result column="auctionStartTime" property="auctionstarttime" jdbcType="TIMESTAMP"/>
+        <result column="auctionEndTime" property="auctionendtime" jdbcType="TIMESTAMP"/>
+        <result column="auctionPic" property="auctionpic" jdbcType="VARCHAR"/>
+        <result column="auctionPicType" property="auctionpictype" jdbcType="VARCHAR"/>
+        <result column="auctionDesc" property="auctiondesc" jdbcType="VARCHAR"/>
+
+        <!--多方关联 Record -->
+        <collection property="recordList" ofType="com.web.auction.pojo.Record">
+            <id column="record_id" property="id" jdbcType="INTEGER"/>
+            <result column="record_user_id" property="userid" jdbcType="INTEGER"/>
+            <result column="record_auction_id" property="auctionid" jdbcType="INTEGER"/>
+            <result column="auctionTime" property="auctiontime" jdbcType="TIMESTAMP"/>
+            <result column="auctionPrice" property="auctionprice" jdbcType="DECIMAL"/>
+            <!--一方关联  -->
+            <association property="user" javaType="com.web.auction.pojo.User">
+                <id column="record_user_id" property="userid" jdbcType="INTEGER"/>
+                <result column="userName" property="username" jdbcType="VARCHAR"/>
+            </association>
+        </collection>
+    </resultMap>
+
+    <select id="queryAuctionAndRecordById" parameterType="int" resultMap="auctionAndRecordMap">
+        SELECT auction.*,
+        auctionrecord.id record_id,
+        auctionrecord.auctionId record_auction_id,
+        auctionrecord.userId record_user_id,
+        auctionrecord.auctionPrice,
+        auctionrecord.auctionTime,
+        auctionuser.userName
+        FROM auction
+        LEFT OUTER JOIN auctionrecord on auction.auctionId = auctionrecord.auctionId
+        LEFT OUTER JOIN auctionuser on auctionuser.userId = auctionrecord.userId
+        WHERE auction.auctionId =#{id}
+        ORDER BY auctionrecord.auctionPrice DESC;
+    </select>
+
+    <select id="queryEndAuctionList" resultType="com.web.auction.pojo.AuctionCustom">
+        SELECT
+        auction.auctionname,
+        auction.auctionstarttime,
+        auction.auctionendtime,
+        auction.auctionstartprice,
+        auctionrecord.auctionprice,
+        auctionuser.username
+        FROM
+        auction,auctionrecord,auctionuser
+        WHERE
+        auction.auctionid=auctionrecord.auctionid
+        AND auctionrecord.userid=auctionuser.userid
+        AND auction.auctionendtime<![CDATA[<]]>NOW()
+        AND auctionrecord.auctionprice=
+        (SELECT MAX(r.auctionprice) FROM auctionrecord r
+        WHERE r.auctionid=auction.auctionid)
+    </select>
+
+    <select id="queryNowAuctionList" resultMap="auctionAndRecordMap">
+        SELECT
+        auction.*,
+        auctionrecord.id auction_record_id,
+        auctionrecord.userid auction_record_userid,
+        auctionrecord.auctionId auction_record_auctionid,
+        auctionrecord.auctiontime,
+        auctionrecord.auctionprice,
+        auctionuser.username
+        FROM
+        auction,auctionrecord,auctionuser
+        WHERE
+        auction.auctionid=auctionrecord.auctionid
+        AND auctionrecord.userid=auctionuser.userid
+        AND auction.auctionendtime<![CDATA[>]]>NOW()
+        ORDER BY auctionrecord.auctionprice DESC;
+    </select>
+
+</mapper>
